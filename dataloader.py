@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 def get_data(root = "PrIMuS"):
-    files_aa = {"png": [], "notation": []}
-    files_ab = {"png": [], "notation": []}
+    files_aa = {"file": [], "png": [], "notation": []}
+    files_ab = {"file": [], "png": [], "notation": []}
     
     for pkg in os.listdir(root):
         try:
@@ -13,13 +13,16 @@ def get_data(root = "PrIMuS"):
                     data = f.read()
                 
                 if pkg == "package_aa":
+                    files_aa["file"].append(file)
                     files_aa["png"].append(f"{path}/{file}.png")
                     files_aa["notation"].append(data)
                     
                 elif pkg == "package_ab":
+                    files_ab["file"].append(file)
                     files_ab["png"].append(f"{path}/{file}.png")
                     files_ab["notation"].append(data)
-        except:
+        except Exception as e:
+            print(e)
             break
 
     return files_aa, files_ab
