@@ -4,127 +4,102 @@ import torch.nn.functional as F
 
 
 def leaky_relu(features, alpha=0.2):
-    return F.leaky_relu(features, negative_slope=alpha)
+    return torch.maximum(alpha * features, features)
+
+
+class CTC_CRNN(nn.Module):
+    def __init__(self, params):
+        super(CTC_CRNN, self).__init__()
+
+        self.params = params
+        self.conv_blocks = nn.ModuleList()
+        self.batch_norms = nn.ModuleList()
+        self.pools = nn.ModuleList()
+
+        # Number of input channels (e.g., 1 for grayscale images)
+        input_channels = params["img_channels"]
+
+        # Convolutional layers
+        for i in range(params["conv_blocks"]):
+            conv = nn.Conv2d(
+                in_channels=input_channels,
+                out_channels=params["conv_filter_n"][i],
+                kernel_size=params["conv_filter_size"][i],
+                padding=1,  # 'same' padding equivalent
+            )
+            bn = nn.BatchNorm2d(params["conv_filter_n"][i])
+            pool = nn.MaxPool2d(kernel_size=params["conv_pooling_size"][i])
+            self.conv_blocks.append(conv)
+            self.batch_norms.append(bn)
+            self.pools.append(pool)
+            input_channels = params["conv_filter_n"][i]  # Update for the next block
+
+        # Calculate RNN input size
+        conv_height = params["img_height"] // (2 ** len(params["conv_pooling_size"]))
+        self.rnn_input_size = params["conv_filter_n"][-1] * conv_height
+
+        # RNN layers
+        self.rnn_units = params["rnn_units"]
+        self.rnn_layers = params["rnn_layers"]
+        self.lstm = nn.LSTM(
+            input_size=self.rnn_input_size,
+            hidden_size=self.rnn_units,
+            num_layers=self.rnn_layers,
+            bidirectional=True,
+            batch_first=False,
+        )
+
+        # Fully connected output layer
+        self.fc = nn.Linear(
+            self.rnn_units * 2, params["vocabulary_size"] + 1
+        )  # +1 for the CTC blank token
+
+    def forward(self, x, seq_lengths):
+        """
+        Forward pass for CTC_CRNN
+        Args:
+            x (torch.Tensor): Input tensor of shape [batch_size, channels, height, width]
+            seq_lengths (torch.Tensor): Sequence lengths for CTC loss
+        Returns:
+            logits (torch.Tensor): Logits for CTC loss, shape [time_steps, batch_size, num_classes]
+            seq_lengths (torch.Tensor): Adjusted sequence lengths
+        """
+        # Ensure input is in NCHW format
+        if x.size(1) != self.params["img_channels"]:
+            raise ValueError(
+                f"Expected {self.params['img_channels']} channels, got {x.size(1)}"
+            )
+
+        # Apply convolutional layers
+        for conv, bn, pool in zip(self.conv_blocks, self.batch_norms, self.pools):
+            x = pool(F.leaky_relu(bn(conv(x))))
+
+        # Prepare features for RNN
+        b, c, h, w = x.size()
+        x = x.permute(3, 0, 2, 1).contiguous()  # [width, batch, height, channels]
+        x = x.view(w, b, -1)  # [width, batch, features]
+
+        # RNN layers
+        x, _ = self.lstm(x)
+
+        # Fully connected layer
+        logits = self.fc(x)
+
+        return logits, seq_lengths
 
 
 def default_model_params(img_height, vocabulary_size):
-    params = dict()
-    params["img_height"] = img_height
-    params["img_width"] = None
-    params["batch_size"] = 16
-    params["img_channels"] = 1
-    params["conv_blocks"] = 4
-    params["conv_filter_n"] = [32, 64, 128, 256]
-    params["conv_filter_size"] = [3, 3, 3, 3]
-    params["conv_pooling_size"] = [2, 2, 2, 2]
-    params["rnn_units"] = 512
-    params["rnn_layers"] = 2
-    params["vocabulary_size"] = vocabulary_size
+    params = {
+        "img_height": img_height,
+        "img_width": None,
+        "batch_size": 16,
+        "img_channels": 1,
+        "conv_blocks": 4,
+        "conv_filter_n": [32, 64, 128, 256],
+        "conv_filter_size": [[3, 3], [3, 3], [3, 3], [3, 3]],
+        "conv_pooling_size": [[2, 2], [2, 2], [2, 2], [2, 2]],
+        "rnn_units": 512,
+        "rnn_layers": 2,
+        "vocabulary_size": vocabulary_size,
+    }
     return params
-
-
-class CTCCRNN(nn.Module):
-    def __init__(self, params):
-        super(CTCCRNN, self).__init__()
-        self.params = params
-
-        # Create sequential convolutional blocks
-        conv_layers = []
-        in_channels = params["img_channels"]
-
-        for i in range(params["conv_blocks"]):
-            # Convolutional layer
-            conv_layers.append(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=params["conv_filter_n"][i],
-                    kernel_size=params["conv_filter_size"][i],
-                    padding="same",
-                )
-            )
-            # Batch normalization
-            conv_layers.append(nn.BatchNorm2d(params["conv_filter_n"][i]))
-            # Leaky ReLU
-            conv_layers.append(nn.LeakyReLU(0.2))
-            # Max pooling
-            conv_layers.append(
-                nn.MaxPool2d(
-                    kernel_size=params["conv_pooling_size"][i],
-                    stride=params["conv_pooling_size"][i],
-                )
-            )
-
-            in_channels = params["conv_filter_n"][i]
-
-        self.conv_layers = nn.Sequential(*conv_layers)
-
-        # Bidirectional LSTM layers
-        self.rnn_layers = nn.ModuleList(
-            [
-                nn.LSTM(
-                    input_size=(
-                        params["conv_filter_n"][-1]
-                        if i == 0
-                        else params["rnn_units"] * 2
-                    ),
-                    hidden_size=params["rnn_units"],
-                    bidirectional=True,
-                    batch_first=True,
-                )
-                for i in range(params["rnn_layers"])
-            ]
-        )
-
-        # Final fully connected layer
-        self.fc = nn.Linear(
-            params["rnn_units"] * 2, params["vocabulary_size"] + 1  # +1 for CTC blank
-        )
-
-    def forward(self, x):
-        # Apply convolutional layers
-        conv_output = self.conv_layers(x)
-
-        # Prepare for RNN (B, C, H, W) -> (B, W, H*C)
-        batch_size, channels, height, width = conv_output.size()
-        rnn_input = conv_output.permute(0, 3, 1, 2)
-        rnn_input = rnn_input.contiguous().view(batch_size, width, channels * height)
-
-        # Apply RNN layers
-        rnn_output = rnn_input
-        for rnn_layer in self.rnn_layers:
-            rnn_output, _ = rnn_layer(rnn_output)
-
-        # Apply final fully connected layer
-        logits = self.fc(rnn_output)
-
-        # Log softmax for CTC loss
-        log_probs = F.log_softmax(logits, dim=2)
-
-        return log_probs
-
-    def get_seq_length(self, input_length):
-        """Calculate sequence length after CNN layers"""
-        seq_length = input_length
-        for i in range(self.params["conv_blocks"]):
-            seq_length = seq_length // self.params["conv_pooling_size"][i]
-        return seq_length
-
-
-def ctc_loss(logits, targets, seq_len, target_len):
-    """
-    Calculate CTC loss
-    Args:
-        logits: (B, T, C) log probabilities
-        targets: Target sequences
-        seq_len: Length of input sequences
-        target_len: Length of target sequences
-    """
-    loss = F.ctc_loss(
-        logits.transpose(0, 1),  # (T, B, C) required by CTC loss
-        targets,
-        seq_len,
-        target_len,
-        blank=0,
-        reduction="mean",
-    )
-    return loss
