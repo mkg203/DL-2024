@@ -35,7 +35,7 @@ vocabulary_size = len(int2word)
 params = default_model_params(img_height, vocabulary_size)
 
 # Load trained model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")# torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = CTC_CRNN(params)
 model.load_state_dict(torch.load(args.model, map_location=device))
 model.to(device)

@@ -4,6 +4,7 @@ import ctc_utils
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 import random
+import pandas as pd
 
 
 class CTC_PriMuS:
@@ -39,8 +40,12 @@ class CTC_PriMuS:
         self.current_idx = 0
 
         # Load corpus
-        with open(corpus_filepath, "r", encoding="utf-8") as corpus_file:
-            corpus_list = corpus_file.read().splitlines()
+        self.corpus_df = pd.read_csv(corpus_filepath)
+        self.corpus_df["png"] = self.corpus_df["png"].apply(lambda x: "../" + x)
+
+        corpus_list = self.corpus_df["file"].to_list()
+        # with open(corpus_filepath, "r", encoding="utf-8") as corpus_file:
+            # corpus_list = corpus_file.read().splitlines()
 
         # Load dictionary
         self.word2int = {}
@@ -102,18 +107,18 @@ class CTC_PriMuS:
     ) -> np.ndarray:
         """Prepare batch of images with consistent dimensions."""
         max_width = max(img.shape[1] for img in images)
+        # Rearrange dimensions to match PyTorch's expected NCHW format
         batch_shape = [
             len(images),
+            params["img_channels"],  # Channels dimension moved to position 1
             params["img_height"],
             max_width,
-            params["img_channels"],
         ]
-
         batch_images = np.ones(shape=batch_shape, dtype=np.float32) * self.PAD_COLUMN
-
         for i, img in enumerate(images):
-            batch_images[i, : img.shape[0], : img.shape[1], 0] = img
-
+            # Reshape the image to add channel dimension and transpose
+            img_reshaped = img[np.newaxis, :, :]  # Add channel dimension
+            batch_images[i, :, :img.shape[0], :img.shape[1]] = img_reshaped
         return batch_images
 
     def nextBatch(self, params: Dict) -> Dict:
@@ -122,8 +127,9 @@ class CTC_PriMuS:
         labels = []
 
         for _ in range(params["batch_size"]):
-            sample_filepath = self.training_list[self.current_idx]
-            sample_fullpath = self.corpus_dirpath / sample_filepath / sample_filepath
+            sample_fullpath = self.corpus_df["png"][self.current_idx]
+            # sample_filepath = self.training_list[self.current_idx]
+            # sample_fullpath = self.corpus_dirpath / sample_filepath / sample_filepath
 
             # Load and process image
             sample_img = self._load_image(sample_fullpath)
@@ -160,9 +166,10 @@ class CTC_PriMuS:
             labels = []
 
             for sample_filepath in self.validation_list:
-                sample_fullpath = (
-                    self.corpus_dirpath / sample_filepath / sample_filepath
-                )
+                sample_fullpath = self.corpus_df[self.corpus_df["file"] == sample_filepath]["png"].iloc[0]
+                # sample_fullpath = (
+                #     self.corpus_dirpath / sample_filepath / sample_filepath
+                # )
 
                 # Load and process image
                 sample_img = self._load_image(sample_fullpath)
@@ -191,3 +198,42 @@ class CTC_PriMuS:
             }
 
         return self.validation_dict, len(self.validation_list)
+
+    def getValidationSize(self) -> int:
+        """Return the total size of validation dataset."""
+        return len(self.validation_list)
+
+    def getValidationBatch(self, start_idx: int, batch_size: int, params: Dict) -> Dict:
+        """Get a batch of validation data."""
+        end_idx = min(start_idx + batch_size, len(self.validation_list))
+        batch_filepaths = self.validation_list[start_idx:end_idx]
+        
+        images = []
+        labels = []
+        
+        for sample_filepath in batch_filepaths:
+            # Get PNG path from DataFrame
+            sample_fullpath = self.corpus_df[self.corpus_df["file"] == sample_filepath]["png"].iloc[0]
+            
+            # Load and process image
+            sample_img = self._load_image(sample_fullpath)
+            sample_img = ctc_utils.resize(sample_img, params["img_height"])
+            images.append(ctc_utils.normalize(sample_img))
+            
+            # Load ground truth
+            extension = ".semantic" if self.semantic else ".agnostic"
+            gt_path = f"{sample_fullpath}{extension}"
+            with open(gt_path, "r", encoding="utf-8") as gt_file:
+                sample_gt_plain = gt_file.readline().rstrip().split(ctc_utils.word_separator())
+                labels.append([self.word2int[lab] for lab in sample_gt_plain])
+        
+        # Prepare batch data
+        batch_images = self._prepare_batch_images(images, params)
+        width_reduction = self._calculate_width_reduction(params)
+        lengths = [batch_images.shape[2] / width_reduction] * len(images)
+        
+        return {
+            "inputs": batch_images,
+            "seq_lengths": np.asarray(lengths),
+            "targets": labels,
+        }

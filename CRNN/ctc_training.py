@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 import argparse
 import os
 from ctc_model import CTC_CRNN, default_model_params
-from primus import CTC_PriMuS  # Assuming similar data handling as TensorFlow script
-import ctc_utils  # Utility methods (unchanged)
+from primus import CTC_PriMuS
+import ctc_utils    
 
 parser = argparse.ArgumentParser(description="Train model.")
 parser.add_argument(
@@ -33,7 +33,7 @@ parser.add_argument("-semantic", dest="semantic", action="store_true", default=F
 args = parser.parse_args()
 
 # Load dataset
-primus = CTC_PriMuS(args.corpus, args.set, args.voc, args.semantic, val_split=0.1)
+primus = CTC_PriMuS(args.set, args.corpus, args.voc, args.semantic, val_split=0.1)
 
 # Model parameters
 img_height = 128
@@ -55,66 +55,107 @@ batch_size = params["batch_size"]
 for epoch in range(max_epochs):
     model.train()
     batch = primus.nextBatch(params)
-
     inputs = torch.tensor(batch["inputs"], dtype=torch.float32).to(device)
     seq_lengths = torch.tensor(batch["seq_lengths"], dtype=torch.int32).to(device)
-    targets = ctc_utils.sparse_tuple_from(batch["targets"])
+
+    # Convert targets to PyTorch format
+    targets_flat = torch.tensor([item for sublist in batch["targets"] for item in sublist], dtype=torch.int32).to(device)
+    target_lengths = torch.tensor([len(target) for target in batch["targets"]], dtype=torch.int32).to(device)
 
     # Forward pass
     logits, seq_lengths_out = model(inputs, seq_lengths)
+    log_probs = logits.log_softmax(2)  # Shape: [T, N, C]
 
-    log_probs = logits.log_softmax(2)
-    loss = ctc_loss(log_probs, targets, seq_lengths_out, targets.shape[0])
+    # CTC loss expects input_lengths as a tensor
+    input_lengths = seq_lengths_out.to(torch.int32)
+
+    # PyTorch CTC loss
+    print("Input lengths:", input_lengths)
+    print("Target lengths:", target_lengths)
+
+    loss = ctc_loss(
+        log_probs,
+        targets_flat,
+        input_lengths,
+        target_lengths
+    )
+    print(loss)
 
     # Backward pass
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
+    # Validation
     if epoch % 1000 == 0:
-        # Validation
         print(f"Loss value at epoch {epoch}: {loss.item()}")
         print("Validating...")
-
         model.eval()
+        
+        # Initialize validation metrics
+        val_ed = 0
+        val_len = 0
+        val_count = 0
+        
         with torch.no_grad():
-            validation_batch, validation_size = primus.getValidation(params)
-            val_idx = 0
-            val_ed = 0
-            val_len = 0
-            val_count = 0
-
-            while val_idx < validation_size:
+            validation_size = primus.getValidationSize()
+            
+            for val_idx in range(0, validation_size, batch_size):
+                # Get batch of validation data
+                validation_batch = primus.getValidationBatch(val_idx, batch_size, params)
+                
+                # Convert to tensors and move to device
                 mini_batch_inputs = torch.tensor(
-                    validation_batch["inputs"][val_idx : val_idx + batch_size],
+                    validation_batch["inputs"],
                     dtype=torch.float32,
                 ).to(device)
+                
                 mini_batch_seq_lengths = torch.tensor(
-                    validation_batch["seq_lengths"][val_idx : val_idx + batch_size],
+                    validation_batch["seq_lengths"],
                     dtype=torch.int32,
                 ).to(device)
-
+                
+                # Forward pass
                 logits, seq_lengths_out = model(
                     mini_batch_inputs, mini_batch_seq_lengths
                 )
+                
+                # Greedy decoding
+                log_probs = logits.log_softmax(2)  # Shape: [T, N, C]
+                predictions = torch.argmax(log_probs, dim=2).transpose(0, 1)  # Shape: [N, T]
 
-                predictions = torch.argmax(logits, dim=2)
-                str_predictions = ctc_utils.decode_predictions(predictions)
-
-                for i, pred in enumerate(str_predictions):
+                # Remove duplicates and blank tokens (CTC decoding logic)
+                blank_token = params["vocabulary_size"]
+                decoded_predictions = []
+                for seq in predictions:
+                    decoded_seq = []
+                    previous_token = None
+                    for token in seq:
+                        if token != previous_token and token != blank_token:
+                            decoded_seq.append(token.item())
+                        previous_token = token
+                    decoded_predictions.append(decoded_seq)
+                
+                # Calculate metrics
+                current_batch_size = len(decoded_predictions)
+                for i, pred in enumerate(decoded_predictions):
                     ed = ctc_utils.edit_distance(
-                        pred, validation_batch["targets"][val_idx + i]
+                        pred, validation_batch["targets"][i]
                     )
                     val_ed += ed
-                    val_len += len(validation_batch["targets"][val_idx + i])
+                    val_len += len(validation_batch["targets"][i])
                     val_count += 1
-
-                val_idx += batch_size
-
-            print(
-                f"[Epoch {epoch}] SER: {100.0 * val_ed / val_len:.2f}% "
-                f"({val_ed / val_count:.2f} average edit distance)."
-            )
+                    
+                # Clear GPU cache after each batch
+                torch.cuda.empty_cache()
+                
+                # Print progress
+                print(f"Processed {val_idx + current_batch_size}/{validation_size} validation samples", end='\r')
+                
+        print(
+            f"\n[Epoch {epoch}] SER: {100.0 * val_ed / val_len:.2f}% "
+            f"({val_ed / val_count:.2f} average edit distance)."
+        )
 
         # Save model
         torch.save(model.state_dict(), f"{args.save_model}_epoch_{epoch}.pth")

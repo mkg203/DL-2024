@@ -47,6 +47,7 @@ class CTC_CRNN(nn.Module):
             num_layers=self.rnn_layers,
             bidirectional=True,
             batch_first=False,
+            dropout=0.5
         )
 
         # Fully connected output layer
@@ -92,7 +93,7 @@ def default_model_params(img_height, vocabulary_size):
     params = {
         "img_height": img_height,
         "img_width": None,
-        "batch_size": 16,
+        "batch_size": 8,
         "img_channels": 1,
         "conv_blocks": 4,
         "conv_filter_n": [32, 64, 128, 256],

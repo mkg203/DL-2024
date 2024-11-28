@@ -5,3 +5,5 @@ data.csv
 __pycache__/
 *.py[cod]
 ./rep_paper/__pycache__
+*model_saves
+model_logs.txt
