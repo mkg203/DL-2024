@@ -7,3 +7,4 @@ __pycache__/
 ./rep_paper/__pycache__
 *model_saves
 model_logs.txt
+./seq2seq/.ipynb_checkpoints/
