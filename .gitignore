@@ -7,3 +7,5 @@ __pycache__/
 ./rep_paper/__pycache__
 *model_saves
 model_logs.txt
+.venv
+pre-model
