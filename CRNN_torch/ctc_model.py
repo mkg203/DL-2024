@@ -47,7 +47,7 @@ class CTC_CRNN(nn.Module):
             num_layers=self.rnn_layers,
             bidirectional=True,
             batch_first=False,
-            dropout=0.5
+            dropout=0.5,
         )
 
         # Fully connected output layer
