@@ -1,7 +1,7 @@
 PrIMuS
 package_aa.csv
 package_ab.csv
-data.csv
+# data.csv
 __pycache__/
 *.py[cod]
 *model_saves
