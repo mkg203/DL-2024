@@ -5,6 +5,7 @@ data.csv
 __pycache__/
 *.py[cod]
 *model_saves
+models
 model_logs.txt
 .venv
 pre-model
