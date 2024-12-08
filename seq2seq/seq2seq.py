@@ -135,7 +135,6 @@ test_loader = DataLoader(
 )
 
 
-# Seq2Seq model
 class Encoder(nn.Module):
     def __init__(self, input_dim, embedding_dim, hidden_dim, n_layers, dropout):
         super().__init__()
@@ -146,22 +145,91 @@ class Encoder(nn.Module):
     def forward(self, src):
         embedded = self.dropout(self.embedding(src))
         outputs, (hidden, cell) = self.rnn(embedded)
-        return hidden, cell
+        # outputs: [src_len, batch_size, hidden_dim]
+        # hidden: [n_layers, batch_size, hidden_dim]
+        # cell: [n_layers, batch_size, hidden_dim]
+        return outputs, (hidden, cell)
 
 
+# Attention mechanism
+class Attention(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        self.attn = nn.Linear(hidden_dim * 2, hidden_dim)
+        self.v = nn.Linear(hidden_dim, 1, bias=False)
+
+    def forward(self, hidden, encoder_outputs):
+        # hidden: [n_layers, batch_size, hidden_dim]
+        # encoder_outputs: [src_len, batch_size, hidden_dim]
+
+        src_len = encoder_outputs.shape[0]
+        batch_size = encoder_outputs.shape[1]
+
+        # Repeat hidden state for each source token
+        hidden = (
+            hidden[-1].unsqueeze(1).repeat(1, src_len, 1)
+        )  # [batch_size, src_len, hidden_dim]
+
+        # Calculate energy
+        energy = torch.tanh(
+            self.attn(torch.cat((hidden, encoder_outputs.permute(1, 0, 2)), dim=2))
+        )  # [batch_size, src_len, hidden_dim]
+        attention = self.v(energy).squeeze(2)  # [batch_size, src_len]
+
+        # Softmax over attention weights
+        return nn.functional.softmax(attention, dim=1)
+
+
+# Decoder with attention
 class Decoder(nn.Module):
-    def __init__(self, output_dim, embedding_dim, hidden_dim, n_layers, dropout):
+    def __init__(
+        self, output_dim, embedding_dim, hidden_dim, n_layers, dropout, attention
+    ):
         super().__init__()
         self.embedding = nn.Embedding(output_dim, embedding_dim)
-        self.rnn = nn.LSTM(embedding_dim, hidden_dim, n_layers, dropout=dropout)
-        self.fc_out = nn.Linear(hidden_dim, output_dim)
+        self.rnn = nn.LSTM(
+            embedding_dim + hidden_dim, hidden_dim, n_layers, dropout=dropout
+        )
+        self.fc_out = nn.Linear(hidden_dim * 2, output_dim)
         self.dropout = nn.Dropout(dropout)
+        self.attention = attention
 
-    def forward(self, input, hidden, cell):
-        input = input.unsqueeze(0)
-        embedded = self.dropout(self.embedding(input))
-        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
-        prediction = self.fc_out(output.squeeze(0))
+    def forward(self, input, hidden, cell, encoder_outputs):
+        # input: [batch_size]
+        # hidden: [n_layers, batch_size, hidden_dim]
+        # cell: [n_layers, batch_size, hidden_dim]
+        # encoder_outputs: [src_len, batch_size, hidden_dim]
+
+        input = input.unsqueeze(0)  # [1, batch_size]
+        embedded = self.dropout(self.embedding(input))  # [1, batch_size, embedding_dim]
+
+        # Attention
+        attention_weights = self.attention(
+            hidden, encoder_outputs
+        )  # [batch_size, src_len]
+        attention_weights = attention_weights.unsqueeze(1)  # [batch_size, 1, src_len]
+
+        # Weighted sum of encoder outputs
+        encoder_outputs = encoder_outputs.permute(
+            1, 0, 2
+        )  # [batch_size, src_len, hidden_dim]
+        weighted = torch.bmm(
+            attention_weights, encoder_outputs
+        )  # [batch_size, 1, hidden_dim]
+        weighted = weighted.permute(1, 0, 2)  # [1, batch_size, hidden_dim]
+
+        # Combine embedded input and weighted encoder context
+        rnn_input = torch.cat(
+            (embedded, weighted), dim=2
+        )  # [1, batch_size, embedding_dim + hidden_dim]
+
+        # Pass through RNN
+        output, (hidden, cell) = self.rnn(rnn_input, (hidden, cell))
+
+        # Final output prediction
+        prediction = self.fc_out(
+            torch.cat((output.squeeze(0), weighted.squeeze(0)), dim=1)
+        )  # [batch_size, output_dim]
         return prediction, hidden, cell
 
 
@@ -177,33 +245,38 @@ class Seq2Seq(nn.Module):
         trg_len = trg.shape[0]
         trg_vocab_size = self.decoder.fc_out.out_features
         outputs = torch.zeros(trg_len, batch_size, trg_vocab_size).to(self.device)
-        hidden, cell = self.encoder(src)
+
+        # Update: Get encoder_outputs
+        encoder_outputs, (hidden, cell) = self.encoder(src)
         input = trg[0, :]
+
         for t in range(1, trg_len):
-            output, hidden, cell = self.decoder(input, hidden, cell)
+            output, hidden, cell = self.decoder(input, hidden, cell, encoder_outputs)
             outputs[t] = output
             top1 = output.argmax(1)
             input = trg[t] if random.random() < teacher_forcing_ratio else top1
+
         return outputs
 
 
 # Model initialization
 input_dim = len(agnostic_vocab)
 output_dim = len(semantic_vocab)
-embedding_dim = 256
-hidden_dim = 512
-n_layers = 4
+embedding_dim = 128
+hidden_dim = 256
+n_layers = 2
 dropout = 0.5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+attention = Attention(hidden_dim)
 encoder = Encoder(input_dim, embedding_dim, hidden_dim, n_layers, dropout)
-decoder = Decoder(output_dim, embedding_dim, hidden_dim, n_layers, dropout)
+decoder = Decoder(output_dim, embedding_dim, hidden_dim, n_layers, dropout, attention)
 model = Seq2Seq(encoder, decoder, device).to(device)
+
 
 # Training setup
 optimizer = optim.Adam(model.parameters())
 criterion = nn.CrossEntropyLoss(ignore_index=semantic_vocab.token_to_id("<pad>"))
-
 
 # Setup logging
 logging.basicConfig(
