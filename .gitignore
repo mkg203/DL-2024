@@ -9,3 +9,4 @@ model_logs.txt
 .venv
 pre-model
 ./seq2seq/.ipynb_checkpoints/
+*.pth
