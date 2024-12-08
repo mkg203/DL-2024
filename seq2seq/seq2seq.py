@@ -6,9 +6,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import random
 import numpy as np
+import logging
 
 
-df = pd.read_csv("../data/data.csv")
+df = pd.read_csv("../data.csv")
 df_filtered = df[["agnostic", "semantic"]]
 
 agn_vocab_file = "../agnostic_vocab.txt"
@@ -121,7 +122,7 @@ train_dataset = MusicDataset(train_data, agnostic_vocab, semantic_vocab)
 validation_dataset = MusicDataset(validation_data, agnostic_vocab, semantic_vocab)
 test_dataset = MusicDataset(test_data, agnostic_vocab, semantic_vocab)
 
-batch_size = 70
+batch_size = 35
 
 train_loader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x
@@ -202,6 +203,15 @@ model = Seq2Seq(encoder, decoder, device).to(device)
 # Training setup
 optimizer = optim.Adam(model.parameters())
 criterion = nn.CrossEntropyLoss(ignore_index=semantic_vocab.token_to_id("<pad>"))
+
+
+# Setup logging
+logging.basicConfig(
+    filename="training_log.log",
+    filemode="w",
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 
 
 def train_fn(model, data_loader, optimizer, criterion, clip, teacher_forcing_ratio=0.5):
@@ -333,6 +343,11 @@ def execute(
         )
         print(f"Training Loss: {train_loss:.4f} | Validation Loss: {valid_loss:.4f}")
         print(f"Sequence error: {seq_er:.4f} | Symbol error {sym_er:.4f}")
+        logging.info(f"Epoch {epoch + 1}/{n_epochs}")
+        logging.info(f"Training Loss: {train_loss:.4f}")
+        logging.info(f"Validation Loss: {valid_loss:.4f}")
+        logging.info(f"Sequence Error Rate: {seq_er:.4f}")
+        logging.info(f"Symbol Error Rate: {sym_er:.4f}")
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), "best_model.pt")  # Save the best model
