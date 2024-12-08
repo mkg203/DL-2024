@@ -11,3 +11,4 @@ model_logs.txt
 pre-model
 ./seq2seq/.ipynb_checkpoints/
 *.pth
+*.pt
