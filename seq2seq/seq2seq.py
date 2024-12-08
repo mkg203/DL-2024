@@ -8,7 +8,7 @@ import random
 import numpy as np
 
 
-df = pd.read_csv("../../data/data.csv")
+df = pd.read_csv("../data/data.csv")
 df_filtered = df[["agnostic", "semantic"]]
 
 agn_vocab_file = "../agnostic_vocab.txt"
@@ -191,7 +191,7 @@ input_dim = len(agnostic_vocab)
 output_dim = len(semantic_vocab)
 embedding_dim = 256
 hidden_dim = 512
-n_layers = 2
+n_layers = 4
 dropout = 0.5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -323,7 +323,7 @@ def execute(
 ):
     best_valid_loss = float("inf")
     for epoch in range(n_epochs):
-        teacher_forcing_ratio = max(0.5 * (1 - epoch / n_epochs), 0.1)
+        teacher_forcing_ratio = max(teacher_forcing_ratio * (1 - epoch / n_epochs), 0.1)
         print(f"Epoch {epoch + 1}/{n_epochs}")
         train_loss = train_fn(
             model, train_loader, optimizer, criterion, clip, teacher_forcing_ratio
