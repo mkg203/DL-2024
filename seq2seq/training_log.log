@@ -1,0 +1,66 @@
+2024-12-09 15:08:03,122 - INFO - Epoch 1/1000
+2024-12-09 15:08:03,122 - INFO - Training Loss: 4.2720
+2024-12-09 15:08:03,122 - INFO - Validation Loss: 3.9383
+2024-12-09 15:08:03,122 - INFO - Sequence Error Rate: 1.0000
+2024-12-09 15:08:03,122 - INFO - Symbol Error Rate: 0.8919
+2024-12-09 15:08:03,122 - INFO - Average Edit Distance: 20.5747
+2024-12-09 15:09:11,533 - INFO - Epoch 2/1000
+2024-12-09 15:09:11,533 - INFO - Training Loss: 3.3419
+2024-12-09 15:09:11,533 - INFO - Validation Loss: 3.0715
+2024-12-09 15:09:11,533 - INFO - Sequence Error Rate: 0.9999
+2024-12-09 15:09:11,533 - INFO - Symbol Error Rate: 0.8654
+2024-12-09 15:09:11,533 - INFO - Average Edit Distance: 20.2625
+2024-12-09 15:10:20,819 - INFO - Epoch 3/1000
+2024-12-09 15:10:20,819 - INFO - Training Loss: 2.5025
+2024-12-09 15:10:20,819 - INFO - Validation Loss: 2.4605
+2024-12-09 15:10:20,819 - INFO - Sequence Error Rate: 0.9968
+2024-12-09 15:10:20,819 - INFO - Symbol Error Rate: 0.8060
+2024-12-09 15:10:20,819 - INFO - Average Edit Distance: 18.5299
+2024-12-09 15:11:29,705 - INFO - Epoch 4/1000
+2024-12-09 15:11:29,705 - INFO - Training Loss: 1.9662
+2024-12-09 15:11:29,705 - INFO - Validation Loss: 2.1336
+2024-12-09 15:11:29,705 - INFO - Sequence Error Rate: 0.9944
+2024-12-09 15:11:29,705 - INFO - Symbol Error Rate: 0.7557
+2024-12-09 15:11:29,705 - INFO - Average Edit Distance: 14.9605
+2024-12-09 15:12:38,722 - INFO - Epoch 5/1000
+2024-12-09 15:12:38,722 - INFO - Training Loss: 1.5724
+2024-12-09 15:12:38,722 - INFO - Validation Loss: 1.8770
+2024-12-09 15:12:38,722 - INFO - Sequence Error Rate: 0.9913
+2024-12-09 15:12:38,722 - INFO - Symbol Error Rate: 0.7100
+2024-12-09 15:12:38,722 - INFO - Average Edit Distance: 11.9908
+2024-12-09 15:13:47,586 - INFO - Epoch 6/1000
+2024-12-09 15:13:47,586 - INFO - Training Loss: 1.2220
+2024-12-09 15:13:47,586 - INFO - Validation Loss: 1.1646
+2024-12-09 15:13:47,586 - INFO - Sequence Error Rate: 0.9875
+2024-12-09 15:13:47,586 - INFO - Symbol Error Rate: 0.6128
+2024-12-09 15:13:47,586 - INFO - Average Edit Distance: 7.0790
+2024-12-09 15:14:56,937 - INFO - Epoch 7/1000
+2024-12-09 15:14:56,937 - INFO - Training Loss: 0.9209
+2024-12-09 15:14:56,937 - INFO - Validation Loss: 0.9665
+2024-12-09 15:14:56,937 - INFO - Sequence Error Rate: 0.9756
+2024-12-09 15:14:56,937 - INFO - Symbol Error Rate: 0.5781
+2024-12-09 15:14:56,937 - INFO - Average Edit Distance: 5.1811
+2024-12-09 15:16:05,735 - INFO - Epoch 8/1000
+2024-12-09 15:16:05,735 - INFO - Training Loss: 0.6966
+2024-12-09 15:16:05,735 - INFO - Validation Loss: 0.5997
+2024-12-09 15:16:05,735 - INFO - Sequence Error Rate: 0.9665
+2024-12-09 15:16:05,735 - INFO - Symbol Error Rate: 0.5382
+2024-12-09 15:16:05,735 - INFO - Average Edit Distance: 3.1979
+2024-12-09 15:17:14,553 - INFO - Epoch 9/1000
+2024-12-09 15:17:14,553 - INFO - Training Loss: 0.5374
+2024-12-09 15:17:14,553 - INFO - Validation Loss: 0.3501
+2024-12-09 15:17:14,554 - INFO - Sequence Error Rate: 0.9586
+2024-12-09 15:17:14,554 - INFO - Symbol Error Rate: 0.5114
+2024-12-09 15:17:14,554 - INFO - Average Edit Distance: 1.9147
+2024-12-09 15:18:23,993 - INFO - Epoch 10/1000
+2024-12-09 15:18:23,993 - INFO - Training Loss: 0.4189
+2024-12-09 15:18:23,993 - INFO - Validation Loss: 0.3471
+2024-12-09 15:18:23,993 - INFO - Sequence Error Rate: 0.9405
+2024-12-09 15:18:23,993 - INFO - Symbol Error Rate: 0.5091
+2024-12-09 15:18:23,993 - INFO - Average Edit Distance: 1.7777
+2024-12-09 15:19:32,872 - INFO - Epoch 11/1000
+2024-12-09 15:19:32,872 - INFO - Training Loss: 0.3344
+2024-12-09 15:19:32,872 - INFO - Validation Loss: 0.2693
+2024-12-09 15:19:32,872 - INFO - Sequence Error Rate: 0.9303
+2024-12-09 15:19:32,872 - INFO - Symbol Error Rate: 0.4997
+2024-12-09 15:19:32,872 - INFO - Average Edit Distance: 1.2992

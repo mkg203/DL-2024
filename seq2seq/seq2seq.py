@@ -1,3 +1,4 @@
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
@@ -122,7 +123,7 @@ train_dataset = MusicDataset(train_data, agnostic_vocab, semantic_vocab)
 validation_dataset = MusicDataset(validation_data, agnostic_vocab, semantic_vocab)
 test_dataset = MusicDataset(test_data, agnostic_vocab, semantic_vocab)
 
-batch_size = 35
+batch_size = 256
 
 train_loader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x
@@ -275,7 +276,7 @@ model = Seq2Seq(encoder, decoder, device).to(device)
 
 
 # Training setup
-optimizer = optim.Adam(model.parameters())
+optimizer = optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-5)
 criterion = nn.CrossEntropyLoss(ignore_index=semantic_vocab.token_to_id("<pad>"))
 
 # Setup logging
@@ -313,7 +314,32 @@ def train_fn(model, data_loader, optimizer, criterion, clip, teacher_forcing_rat
     return epoch_loss / len(data_loader)
 
 
-# Validation function
+def levenshtein(a, b):
+    "Computes the Levenshtein distance between a and b."
+    n, m = len(a), len(b)
+
+    if n > m:
+        a, b = b, a
+        n, m = m, n
+
+    current = range(n + 1)
+    for i in range(1, m + 1):
+        previous, current = current, [i] + [0] * n
+        for j in range(1, n + 1):
+            add, delete = previous[j] + 1, current[j - 1] + 1
+            change = previous[j - 1]
+            if a[j - 1] != b[i - 1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+
+    return current[n]
+
+def edit_distance(a, b, EOS="<eos>", PAD="<pad>"):
+    _a = [s for s in a if s != EOS and s != PAD]
+    _b = [s for s in b if s != EOS and s != PAD]
+
+    return levenshtein(_a, _b)
+
 def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     model.eval()
     epoch_loss = 0
@@ -321,6 +347,7 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     total_symbols = 0
     incorrect_sequences = 0
     incorrect_symbols = 0
+    total_edit_distance = 0.0
 
     with torch.no_grad():
         for batch in data_loader:
@@ -344,26 +371,33 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
             loss = criterion(output, trg)
             epoch_loss += loss.item()
 
-            # Convert predictions to token IDs
-            predicted_ids = output.argmax(dim=1).view(-1)
-            target_ids = trg.view(-1)
-
             # Calculate sequence-level errors
             for pred_seq, true_seq in zip(
-                predicted_ids.split(trg.shape[0] // len(batch)),
-                target_ids.split(trg.shape[0] // len(batch)),
+                output.argmax(dim=1).split(trg.shape[0] // len(batch)),
+                trg.split(trg.shape[0] // len(batch)),
             ):
                 total_sequences += 1
                 total_symbols += len(true_seq)
+
+                # Compare sequences for sequence error rate
                 if not torch.equal(pred_seq, true_seq):
                     incorrect_sequences += 1
                     incorrect_symbols += (pred_seq != true_seq).sum().item()
 
-    avg_loss = epoch_loss / len(data_loader)
-    sequence_error_rate = incorrect_sequences / total_sequences
-    symbol_error_rate = incorrect_symbols / total_symbols
+                # Compute Edit Distance directly
+                total_edit_distance += edit_distance(
+                    pred_seq.tolist(),
+                    true_seq.tolist(),
+                    EOS=semantic_vocab.token_to_id("<eos>"),
+                    PAD=semantic_vocab.token_to_id("<pad>")
+                )
 
-    return avg_loss, sequence_error_rate, symbol_error_rate
+    avg_loss = epoch_loss / len(data_loader)
+    sequence_error_rate = incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
+    symbol_error_rate = incorrect_symbols / total_symbols if total_symbols > 0 else 0.0
+    avg_edit_distance = total_edit_distance / total_sequences if total_sequences > 0 else 0.0
+
+    return avg_loss, sequence_error_rate, symbol_error_rate, avg_edit_distance
 
 
 # Testing function
@@ -392,7 +426,6 @@ def test_fn(model, data_loader, criterion):
     return epoch_loss / len(data_loader), predictions
 
 
-# Execution loop
 def execute(
     model,
     train_loader,
@@ -405,27 +438,37 @@ def execute(
     teacher_forcing_ratio=0.5,
 ):
     best_valid_loss = float("inf")
+    best_edit_distance = float("inf")
+
     for epoch in range(n_epochs):
         teacher_forcing_ratio = max(teacher_forcing_ratio * (1 - epoch / n_epochs), 0.1)
         print(f"Epoch {epoch + 1}/{n_epochs}")
+
         train_loss = train_fn(
             model, train_loader, optimizer, criterion, clip, teacher_forcing_ratio
         )
-        valid_loss, seq_er, sym_er = validate_fn(
+
+        valid_loss, seq_er, sym_er, avg_edit_distance = validate_fn(
             model, validation_loader, criterion, agnostic_vocab, semantic_vocab
         )
+
         print(f"Training Loss: {train_loss:.4f} | Validation Loss: {valid_loss:.4f}")
-        print(f"Sequence error: {seq_er:.4f} | Symbol error {sym_er:.4f}")
+        print(f"Sequence Error Rate: {seq_er:.4f} | Symbol Error Rate: {sym_er:.4f}")
+        print(f"Average Edit Distance: {avg_edit_distance:.4f}")
+
         logging.info(f"Epoch {epoch + 1}/{n_epochs}")
         logging.info(f"Training Loss: {train_loss:.4f}")
         logging.info(f"Validation Loss: {valid_loss:.4f}")
         logging.info(f"Sequence Error Rate: {seq_er:.4f}")
         logging.info(f"Symbol Error Rate: {sym_er:.4f}")
-        if valid_loss < best_valid_loss:
+        logging.info(f"Average Edit Distance: {avg_edit_distance:.4f}")
+
+        if valid_loss < best_valid_loss or avg_edit_distance < best_edit_distance:
             best_valid_loss = valid_loss
-            torch.save(model.state_dict(), "best_model.pt")  # Save the best model
+            best_edit_distance = avg_edit_distance
+            torch.save(model.state_dict(), "best_model.pt")
             print("Model saved!")
-    # Load the best model and test
+
     model.load_state_dict(torch.load("best_model.pt"))
     test_loss, predictions = test_fn(model, test_loader, criterion)
     print(f"Test Loss: {test_loss:.4f}")
