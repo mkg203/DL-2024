@@ -56,6 +56,7 @@ for epoch in range(max_epochs):
     
     # Prepare inputs and targets
     inputs, seq_lengths, targets_flat, target_lengths = prepare_input(batch)
+    print(target_lengths)
     
     # Forward pass
     optimizer.zero_grad()

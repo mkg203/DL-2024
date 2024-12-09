@@ -380,18 +380,24 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
                 total_symbols += len(true_seq)
 
                 # Compare sequences for sequence error rate
-                if not torch.equal(pred_seq, true_seq):
-                    incorrect_sequences += 1
-                    incorrect_symbols += (pred_seq != true_seq).sum().item()
-
-                # Compute Edit Distance directly
-                total_edit_distance += edit_distance(
+                ld = edit_distance(
                     pred_seq.tolist(),
                     true_seq.tolist(),
                     EOS=semantic_vocab.token_to_id("<eos>"),
                     PAD=semantic_vocab.token_to_id("<pad>")
                 )
 
+                if ld != 0:
+                    incorrect_sequences += 1
+                    incorrect_symbols += (pred_seq != true_seq).sum().item()
+                    
+                # if not torch.equal(pred_seq, true_seq):
+                #     incorrect_sequences += 1
+                #     incorrect_symbols += (pred_seq != true_seq).sum().item()
+
+                # Compute Edit Distance directly
+                total_edit_distance += ld
+                
     avg_loss = epoch_loss / len(data_loader)
     sequence_error_rate = incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
     symbol_error_rate = incorrect_symbols / total_symbols if total_symbols > 0 else 0.0

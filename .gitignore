@@ -13,3 +13,5 @@ pre-model
 *.pth
 *.pt
 *.log
+*.png
+.ipynb_checkpoints/

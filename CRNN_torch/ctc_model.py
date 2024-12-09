@@ -27,7 +27,8 @@ class CTC_CRNN(nn.Module):
                 kernel_size=params["conv_filter_size"][i],
                 padding=1,  # 'same' padding equivalent
             )
-            bn = nn.BatchNorm2d(params["conv_filter_n"][i])
+            # Match TensorFlow's batch normalization defaults
+            bn = nn.BatchNorm2d(params["conv_filter_n"][i], eps=1e-5, momentum=0.9)
             pool = nn.MaxPool2d(kernel_size=params["conv_pooling_size"][i])
             self.conv_blocks.append(conv)
             self.batch_norms.append(bn)
@@ -47,7 +48,6 @@ class CTC_CRNN(nn.Module):
             num_layers=self.rnn_layers,
             bidirectional=True,
             batch_first=False,
-            dropout=0.5,
         )
 
         # Fully connected output layer
@@ -72,21 +72,51 @@ class CTC_CRNN(nn.Module):
             )
 
         # Apply convolutional layers
+        width_reduction = 1
         for conv, bn, pool in zip(self.conv_blocks, self.batch_norms, self.pools):
             x = pool(F.leaky_relu(bn(conv(x))))
+            width_reduction *= pool.kernel_size[1]
+
+        # Adjust sequence lengths based on width reduction
+        seq_lengths = seq_lengths // width_reduction
 
         # Prepare features for RNN
         b, c, h, w = x.size()
         x = x.permute(3, 0, 2, 1).contiguous()  # [width, batch, height, channels]
         x = x.view(w, b, -1)  # [width, batch, features]
 
-        # RNN layers
+        # RNN layers with dropout
+        self.lstm.dropout = 0.6
         x, _ = self.lstm(x)
 
         # Fully connected layer
         logits = self.fc(x)
 
         return logits, seq_lengths
+
+    def greedy_decoder(self, logits):
+        """
+        Implements a simple greedy decoder.
+        Args:
+            logits (torch.Tensor): Logits from the model, shape [time_steps, batch_size, num_classes].
+        Returns:
+            List[List[int]]: Decoded sequences.
+        """
+        probabilities = F.softmax(logits, dim=2)
+        _, predictions = torch.max(probabilities, 2)  # [time_steps, batch_size]
+        predictions = predictions.permute(1, 0).tolist()  # Convert to [batch_size, time_steps]
+
+        decoded_sequences = []
+        for seq in predictions:
+            decoded_seq = []
+            previous_token = None
+            for token in seq:
+                if token != previous_token and token != 0:  # Skip repeats and blanks
+                    decoded_seq.append(token)
+                previous_token = token
+            decoded_sequences.append(decoded_seq)
+
+        return decoded_sequences
 
 
 def default_model_params(img_height, vocabulary_size):
