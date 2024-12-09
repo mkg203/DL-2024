@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+from torcheval.metrics.functional import bleu_score
 import random
 import numpy as np
 import logging
@@ -122,7 +123,7 @@ train_dataset = MusicDataset(train_data, agnostic_vocab, semantic_vocab)
 validation_dataset = MusicDataset(validation_data, agnostic_vocab, semantic_vocab)
 test_dataset = MusicDataset(test_data, agnostic_vocab, semantic_vocab)
 
-batch_size = 384
+batch_size = 128
 
 train_loader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x
@@ -313,7 +314,8 @@ def train_fn(model, data_loader, optimizer, criterion, clip, teacher_forcing_rat
     return epoch_loss / len(data_loader)
 
 
-# Validation function
+
+# Validation function with BLEU score and Sequence Error Rate
 def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     model.eval()
     epoch_loss = 0
@@ -321,6 +323,7 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     total_symbols = 0
     incorrect_sequences = 0
     incorrect_symbols = 0
+    total_bleu = 0.0
 
     with torch.no_grad():
         for batch in data_loader:
@@ -355,15 +358,30 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
             ):
                 total_sequences += 1
                 total_symbols += len(true_seq)
+
+                # Compare sequences for sequence error rate
                 if not torch.equal(pred_seq, true_seq):
                     incorrect_sequences += 1
                     incorrect_symbols += (pred_seq != true_seq).sum().item()
 
-    avg_loss = epoch_loss / len(data_loader)
-    sequence_error_rate = incorrect_sequences / total_sequences
-    symbol_error_rate = incorrect_symbols / total_symbols
+                # Compute BLEU score using torcheval
+                pred_tokens = [tok for tok in semantic_vocab.ids_to_tokens(pred_seq.tolist()) if tok != "<pad>"]
+                true_tokens = [tok for tok in semantic_vocab.ids_to_tokens(true_seq.tolist()) if tok != "<pad>"]
 
-    return avg_loss, sequence_error_rate, symbol_error_rate
+                if pred_tokens and true_tokens:
+                    total_bleu += bleu_score(
+                        torch.tensor(pred_seq.tolist()),
+                        torch.tensor([true_seq.tolist()]),
+                        max_n=4,
+                        weights=(0.25, 0.25, 0.25, 0.25),
+                    ).item()
+
+    avg_loss = epoch_loss / len(data_loader)
+    sequence_error_rate = incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
+    symbol_error_rate = incorrect_symbols / total_symbols if total_symbols > 0 else 0.0
+    avg_bleu = total_bleu / total_sequences if total_sequences > 0 else 0.0
+
+    return avg_loss, sequence_error_rate, symbol_error_rate, avg_bleu
 
 
 # Testing function
@@ -392,7 +410,8 @@ def test_fn(model, data_loader, criterion):
     return epoch_loss / len(data_loader), predictions
 
 
-# Execution loop
+
+# Execution loop with BLEU score
 def execute(
     model,
     train_loader,
@@ -405,26 +424,40 @@ def execute(
     teacher_forcing_ratio=0.5,
 ):
     best_valid_loss = float("inf")
+    best_bleu = 0.0
+
     for epoch in range(n_epochs):
         teacher_forcing_ratio = max(teacher_forcing_ratio * (1 - epoch / n_epochs), 0.1)
         print(f"Epoch {epoch + 1}/{n_epochs}")
+
+        # Training
         train_loss = train_fn(
             model, train_loader, optimizer, criterion, clip, teacher_forcing_ratio
         )
-        valid_loss, seq_er, sym_er = validate_fn(
+
+        # Validation
+        valid_loss, seq_er, sym_er, avg_bleu = validate_fn(
             model, validation_loader, criterion, agnostic_vocab, semantic_vocab
         )
+
         print(f"Training Loss: {train_loss:.4f} | Validation Loss: {valid_loss:.4f}")
-        print(f"Sequence error: {seq_er:.4f} | Symbol error {sym_er:.4f}")
+        print(f"Sequence Error Rate: {seq_er:.4f} | Symbol Error Rate: {sym_er:.4f}")
+        print(f"Average BLEU Score: {avg_bleu:.4f}")
+
         logging.info(f"Epoch {epoch + 1}/{n_epochs}")
         logging.info(f"Training Loss: {train_loss:.4f}")
         logging.info(f"Validation Loss: {valid_loss:.4f}")
         logging.info(f"Sequence Error Rate: {seq_er:.4f}")
         logging.info(f"Symbol Error Rate: {sym_er:.4f}")
-        if valid_loss < best_valid_loss:
+        logging.info(f"Average BLEU Score: {avg_bleu:.4f}")
+
+        # Save the best model based on BLEU score
+        if valid_loss < best_valid_loss or avg_bleu > best_bleu:
             best_valid_loss = valid_loss
-            torch.save(model.state_dict(), "best_model.pt")  # Save the best model
+            best_bleu = avg_bleu
+            torch.save(model.state_dict(), "best_model.pt")
             print("Model saved!")
+
     # Load the best model and test
     model.load_state_dict(torch.load("best_model.pt"))
     test_loss, predictions = test_fn(model, test_loader, criterion)
