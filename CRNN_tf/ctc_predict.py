@@ -9,6 +9,7 @@ import ctc_utils
 import cv2
 import numpy as np
 
+
 def run(voc_file, model, image):
     # Enable TensorFlow 1.x compatibility
     tf.compat.v1.disable_eager_execution()
@@ -20,7 +21,7 @@ def run(voc_file, model, image):
     sess = tf.compat.v1.Session()
 
     # Load the dictionary
-    with open(voc_file, 'r') as dict_file:
+    with open(voc_file, "r") as dict_file:
         dict_list = dict_file.read().splitlines()
     int2word = {idx: word for idx, word in enumerate(dict_list)}
 
@@ -50,11 +51,14 @@ def run(voc_file, model, image):
 
     # Perform prediction
     decoded, _ = tf.nn.ctc_greedy_decoder(logits, seq_len_tensor)
-    prediction = sess.run(decoded, feed_dict={
-        input_tensor: image,
-        seq_len_tensor: seq_lengths,
-        rnn_keep_prob_tensor: 1.0,
-    })
+    prediction = sess.run(
+        decoded,
+        feed_dict={
+            input_tensor: image,
+            seq_len_tensor: seq_lengths,
+            rnn_keep_prob_tensor: 1.0,
+        },
+    )
 
     # Convert predictions to strings
     str_predictions = ctc_utils.sparse_tensor_to_strs(prediction)
@@ -64,14 +68,32 @@ def run(voc_file, model, image):
 
     return pred
 
+
 def main():
     # Argument parsing
-    parser = argparse.ArgumentParser(description='Decode a music score image with a trained model (CTC).')
-    parser.add_argument('-image', dest='image', type=str, required=True, help='Path to the input image.')
-    parser.add_argument('-model', dest='model', type=str, required=True, help='Path to the trained model (.meta file).')
-    parser.add_argument('-vocabulary', dest='voc_file', type=str, required=True, help='Path to the vocabulary file.')
+    parser = argparse.ArgumentParser(
+        description="Decode a music score image with a trained model (CTC)."
+    )
+    parser.add_argument(
+        "-image", dest="image", type=str, required=True, help="Path to the input image."
+    )
+    parser.add_argument(
+        "-model",
+        dest="model",
+        type=str,
+        required=True,
+        help="Path to the trained model (.meta file).",
+    )
+    parser.add_argument(
+        "-vocabulary",
+        dest="voc_file",
+        type=str,
+        required=True,
+        help="Path to the vocabulary file.",
+    )
     args = parser.parse_args()
     print(run(args.voc_file, args.model, args.image))
+
 
 if __name__ == "__main__":
     main()

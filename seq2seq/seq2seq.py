@@ -1,4 +1,3 @@
-
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
@@ -334,11 +333,13 @@ def levenshtein(a, b):
 
     return current[n]
 
+
 def edit_distance(a, b, EOS="<eos>", PAD="<pad>"):
     _a = [s for s in a if s != EOS and s != PAD]
     _b = [s for s in b if s != EOS and s != PAD]
 
     return levenshtein(_a, _b)
+
 
 def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     model.eval()
@@ -384,24 +385,28 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
                     pred_seq.tolist(),
                     true_seq.tolist(),
                     EOS=semantic_vocab.token_to_id("<eos>"),
-                    PAD=semantic_vocab.token_to_id("<pad>")
+                    PAD=semantic_vocab.token_to_id("<pad>"),
                 )
 
                 if ld != 0:
                     incorrect_sequences += 1
                     incorrect_symbols += (pred_seq != true_seq).sum().item()
-                    
+
                 # if not torch.equal(pred_seq, true_seq):
                 #     incorrect_sequences += 1
                 #     incorrect_symbols += (pred_seq != true_seq).sum().item()
 
                 # Compute Edit Distance directly
                 total_edit_distance += ld
-                
+
     avg_loss = epoch_loss / len(data_loader)
-    sequence_error_rate = incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
+    sequence_error_rate = (
+        incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
+    )
     symbol_error_rate = incorrect_symbols / total_symbols if total_symbols > 0 else 0.0
-    avg_edit_distance = total_edit_distance / total_sequences if total_sequences > 0 else 0.0
+    avg_edit_distance = (
+        total_edit_distance / total_sequences if total_sequences > 0 else 0.0
+    )
 
     return avg_loss, sequence_error_rate, symbol_error_rate, avg_edit_distance
 
