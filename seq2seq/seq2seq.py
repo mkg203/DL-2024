@@ -122,7 +122,7 @@ train_dataset = MusicDataset(train_data, agnostic_vocab, semantic_vocab)
 validation_dataset = MusicDataset(validation_data, agnostic_vocab, semantic_vocab)
 test_dataset = MusicDataset(test_data, agnostic_vocab, semantic_vocab)
 
-batch_size = 35
+batch_size = 384
 
 train_loader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x
@@ -190,10 +190,10 @@ class Seq2Seq(nn.Module):
 # Model initialization
 input_dim = len(agnostic_vocab)
 output_dim = len(semantic_vocab)
-embedding_dim = 256
-hidden_dim = 512
+embedding_dim = 384
+hidden_dim = 768
 n_layers = 4
-dropout = 0.5
+dropout = 0.7
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 encoder = Encoder(input_dim, embedding_dim, hidden_dim, n_layers, dropout)
@@ -201,7 +201,7 @@ decoder = Decoder(output_dim, embedding_dim, hidden_dim, n_layers, dropout)
 model = Seq2Seq(encoder, decoder, device).to(device)
 
 # Training setup
-optimizer = optim.Adam(model.parameters())
+optimizer = optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-5)
 criterion = nn.CrossEntropyLoss(ignore_index=semantic_vocab.token_to_id("<pad>"))
 
 
