@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from torcheval.metrics.functional import bleu_score
 import random
 import numpy as np
 import logging
@@ -123,7 +122,7 @@ train_dataset = MusicDataset(train_data, agnostic_vocab, semantic_vocab)
 validation_dataset = MusicDataset(validation_data, agnostic_vocab, semantic_vocab)
 test_dataset = MusicDataset(test_data, agnostic_vocab, semantic_vocab)
 
-batch_size = 128
+batch_size = 256
 
 train_loader = DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda x: x
@@ -314,8 +313,32 @@ def train_fn(model, data_loader, optimizer, criterion, clip, teacher_forcing_rat
     return epoch_loss / len(data_loader)
 
 
+def levenshtein(a, b):
+    "Computes the Levenshtein distance between a and b."
+    n, m = len(a), len(b)
 
-# Validation function with BLEU score and Sequence Error Rate
+    if n > m:
+        a, b = b, a
+        n, m = m, n
+
+    current = range(n + 1)
+    for i in range(1, m + 1):
+        previous, current = current, [i] + [0] * n
+        for j in range(1, n + 1):
+            add, delete = previous[j] + 1, current[j - 1] + 1
+            change = previous[j - 1]
+            if a[j - 1] != b[i - 1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+
+    return current[n]
+
+def edit_distance(a, b, EOS="<eos>", PAD="<pad>"):
+    _a = [s for s in a if s != EOS and s != PAD]
+    _b = [s for s in b if s != EOS and s != PAD]
+
+    return levenshtein(_a, _b)
+
 def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     model.eval()
     epoch_loss = 0
@@ -323,7 +346,7 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
     total_symbols = 0
     incorrect_sequences = 0
     incorrect_symbols = 0
-    total_bleu = 0.0
+    total_edit_distance = 0.0
 
     with torch.no_grad():
         for batch in data_loader:
@@ -347,14 +370,10 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
             loss = criterion(output, trg)
             epoch_loss += loss.item()
 
-            # Convert predictions to token IDs
-            predicted_ids = output.argmax(dim=1).view(-1)
-            target_ids = trg.view(-1)
-
             # Calculate sequence-level errors
             for pred_seq, true_seq in zip(
-                predicted_ids.split(trg.shape[0] // len(batch)),
-                target_ids.split(trg.shape[0] // len(batch)),
+                output.argmax(dim=1).split(trg.shape[0] // len(batch)),
+                trg.split(trg.shape[0] // len(batch)),
             ):
                 total_sequences += 1
                 total_symbols += len(true_seq)
@@ -364,24 +383,20 @@ def validate_fn(model, data_loader, criterion, agnostic_vocab, semantic_vocab):
                     incorrect_sequences += 1
                     incorrect_symbols += (pred_seq != true_seq).sum().item()
 
-                # Compute BLEU score using torcheval
-                pred_tokens = [tok for tok in semantic_vocab.ids_to_tokens(pred_seq.tolist()) if tok != "<pad>"]
-                true_tokens = [tok for tok in semantic_vocab.ids_to_tokens(true_seq.tolist()) if tok != "<pad>"]
-
-                if pred_tokens and true_tokens:
-                    total_bleu += bleu_score(
-                        torch.tensor(pred_seq.tolist()),
-                        torch.tensor([true_seq.tolist()]),
-                        max_n=4,
-                        weights=(0.25, 0.25, 0.25, 0.25),
-                    ).item()
+                # Compute Edit Distance directly
+                total_edit_distance += edit_distance(
+                    pred_seq.tolist(),
+                    true_seq.tolist(),
+                    EOS=semantic_vocab.token_to_id("<eos>"),
+                    PAD=semantic_vocab.token_to_id("<pad>")
+                )
 
     avg_loss = epoch_loss / len(data_loader)
     sequence_error_rate = incorrect_sequences / total_sequences if total_sequences > 0 else 0.0
     symbol_error_rate = incorrect_symbols / total_symbols if total_symbols > 0 else 0.0
-    avg_bleu = total_bleu / total_sequences if total_sequences > 0 else 0.0
+    avg_edit_distance = total_edit_distance / total_sequences if total_sequences > 0 else 0.0
 
-    return avg_loss, sequence_error_rate, symbol_error_rate, avg_bleu
+    return avg_loss, sequence_error_rate, symbol_error_rate, avg_edit_distance
 
 
 # Testing function
@@ -410,8 +425,6 @@ def test_fn(model, data_loader, criterion):
     return epoch_loss / len(data_loader), predictions
 
 
-
-# Execution loop with BLEU score
 def execute(
     model,
     train_loader,
@@ -424,41 +437,37 @@ def execute(
     teacher_forcing_ratio=0.5,
 ):
     best_valid_loss = float("inf")
-    best_bleu = 0.0
+    best_edit_distance = float("inf")
 
     for epoch in range(n_epochs):
         teacher_forcing_ratio = max(teacher_forcing_ratio * (1 - epoch / n_epochs), 0.1)
         print(f"Epoch {epoch + 1}/{n_epochs}")
 
-        # Training
         train_loss = train_fn(
             model, train_loader, optimizer, criterion, clip, teacher_forcing_ratio
         )
 
-        # Validation
-        valid_loss, seq_er, sym_er, avg_bleu = validate_fn(
+        valid_loss, seq_er, sym_er, avg_edit_distance = validate_fn(
             model, validation_loader, criterion, agnostic_vocab, semantic_vocab
         )
 
         print(f"Training Loss: {train_loss:.4f} | Validation Loss: {valid_loss:.4f}")
         print(f"Sequence Error Rate: {seq_er:.4f} | Symbol Error Rate: {sym_er:.4f}")
-        print(f"Average BLEU Score: {avg_bleu:.4f}")
+        print(f"Average Edit Distance: {avg_edit_distance:.4f}")
 
         logging.info(f"Epoch {epoch + 1}/{n_epochs}")
         logging.info(f"Training Loss: {train_loss:.4f}")
         logging.info(f"Validation Loss: {valid_loss:.4f}")
         logging.info(f"Sequence Error Rate: {seq_er:.4f}")
         logging.info(f"Symbol Error Rate: {sym_er:.4f}")
-        logging.info(f"Average BLEU Score: {avg_bleu:.4f}")
+        logging.info(f"Average Edit Distance: {avg_edit_distance:.4f}")
 
-        # Save the best model based on BLEU score
-        if valid_loss < best_valid_loss or avg_bleu > best_bleu:
+        if valid_loss < best_valid_loss or avg_edit_distance < best_edit_distance:
             best_valid_loss = valid_loss
-            best_bleu = avg_bleu
+            best_edit_distance = avg_edit_distance
             torch.save(model.state_dict(), "best_model.pt")
             print("Model saved!")
 
-    # Load the best model and test
     model.load_state_dict(torch.load("best_model.pt"))
     test_loss, predictions = test_fn(model, test_loader, criterion)
     print(f"Test Loss: {test_loss:.4f}")
