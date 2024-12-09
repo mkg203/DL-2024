@@ -1,0 +1,145 @@
+2024-12-09 02:31:54,796 - INFO - Epoch 1/1000
+2024-12-09 02:31:54,796 - INFO - Training Loss: 4.3399
+2024-12-09 02:31:54,796 - INFO - Validation Loss: 3.9680
+2024-12-09 02:31:54,796 - INFO - Sequence Error Rate: 1.0000
+2024-12-09 02:31:54,796 - INFO - Symbol Error Rate: 0.8969
+2024-12-09 02:33:50,316 - INFO - Epoch 2/1000
+2024-12-09 02:33:50,317 - INFO - Training Loss: 3.7143
+2024-12-09 02:33:50,317 - INFO - Validation Loss: 3.5345
+2024-12-09 02:33:50,317 - INFO - Sequence Error Rate: 0.9990
+2024-12-09 02:33:50,317 - INFO - Symbol Error Rate: 0.8930
+2024-12-09 02:35:47,536 - INFO - Epoch 3/1000
+2024-12-09 02:35:47,537 - INFO - Training Loss: 3.0957
+2024-12-09 02:35:47,537 - INFO - Validation Loss: 3.0122
+2024-12-09 02:35:47,537 - INFO - Sequence Error Rate: 0.9892
+2024-12-09 02:35:47,537 - INFO - Symbol Error Rate: 0.8731
+2024-12-09 02:37:44,673 - INFO - Epoch 4/1000
+2024-12-09 02:37:44,673 - INFO - Training Loss: 2.5947
+2024-12-09 02:37:44,673 - INFO - Validation Loss: 2.6905
+2024-12-09 02:37:44,673 - INFO - Sequence Error Rate: 0.9875
+2024-12-09 02:37:44,673 - INFO - Symbol Error Rate: 0.8443
+2024-12-09 02:39:42,810 - INFO - Epoch 5/1000
+2024-12-09 02:39:42,810 - INFO - Training Loss: 2.1786
+2024-12-09 02:39:42,810 - INFO - Validation Loss: 2.3180
+2024-12-09 02:39:42,810 - INFO - Sequence Error Rate: 0.9846
+2024-12-09 02:39:42,810 - INFO - Symbol Error Rate: 0.8042
+2024-12-09 02:41:40,824 - INFO - Epoch 6/1000
+2024-12-09 02:41:40,824 - INFO - Training Loss: 1.8538
+2024-12-09 02:41:40,824 - INFO - Validation Loss: 2.0069
+2024-12-09 02:41:40,824 - INFO - Sequence Error Rate: 0.9750
+2024-12-09 02:41:40,824 - INFO - Symbol Error Rate: 0.7657
+2024-12-09 02:43:38,804 - INFO - Epoch 7/1000
+2024-12-09 02:43:38,804 - INFO - Training Loss: 1.6119
+2024-12-09 02:43:38,804 - INFO - Validation Loss: 1.7051
+2024-12-09 02:43:38,804 - INFO - Sequence Error Rate: 0.9697
+2024-12-09 02:43:38,804 - INFO - Symbol Error Rate: 0.7332
+2024-12-09 02:45:37,328 - INFO - Epoch 8/1000
+2024-12-09 02:45:37,328 - INFO - Training Loss: 1.4271
+2024-12-09 02:45:37,328 - INFO - Validation Loss: 1.4912
+2024-12-09 02:45:37,328 - INFO - Sequence Error Rate: 0.9685
+2024-12-09 02:45:37,328 - INFO - Symbol Error Rate: 0.7070
+2024-12-09 02:47:35,159 - INFO - Epoch 9/1000
+2024-12-09 02:47:35,159 - INFO - Training Loss: 1.2826
+2024-12-09 02:47:35,159 - INFO - Validation Loss: 1.2935
+2024-12-09 02:47:35,159 - INFO - Sequence Error Rate: 0.9666
+2024-12-09 02:47:35,159 - INFO - Symbol Error Rate: 0.6824
+2024-12-09 02:49:34,035 - INFO - Epoch 10/1000
+2024-12-09 02:49:34,035 - INFO - Training Loss: 1.1640
+2024-12-09 02:49:34,035 - INFO - Validation Loss: 1.1456
+2024-12-09 02:49:34,035 - INFO - Sequence Error Rate: 0.9657
+2024-12-09 02:49:34,035 - INFO - Symbol Error Rate: 0.6648
+2024-12-09 02:51:33,721 - INFO - Epoch 11/1000
+2024-12-09 02:51:33,721 - INFO - Training Loss: 1.0619
+2024-12-09 02:51:33,721 - INFO - Validation Loss: 1.0385
+2024-12-09 02:51:33,721 - INFO - Sequence Error Rate: 0.9654
+2024-12-09 02:51:33,721 - INFO - Symbol Error Rate: 0.6516
+2024-12-09 02:53:32,889 - INFO - Epoch 12/1000
+2024-12-09 02:53:32,889 - INFO - Training Loss: 0.9705
+2024-12-09 02:53:32,890 - INFO - Validation Loss: 0.9221
+2024-12-09 02:53:32,890 - INFO - Sequence Error Rate: 0.9645
+2024-12-09 02:53:32,890 - INFO - Symbol Error Rate: 0.6310
+2024-12-09 02:55:31,433 - INFO - Epoch 13/1000
+2024-12-09 02:55:31,433 - INFO - Training Loss: 0.8890
+2024-12-09 02:55:31,433 - INFO - Validation Loss: 0.8198
+2024-12-09 02:55:31,433 - INFO - Sequence Error Rate: 0.9637
+2024-12-09 02:55:31,433 - INFO - Symbol Error Rate: 0.6162
+2024-12-09 02:57:30,412 - INFO - Epoch 14/1000
+2024-12-09 02:57:30,412 - INFO - Training Loss: 0.8210
+2024-12-09 02:57:30,412 - INFO - Validation Loss: 0.7656
+2024-12-09 02:57:30,412 - INFO - Sequence Error Rate: 0.9630
+2024-12-09 02:57:30,412 - INFO - Symbol Error Rate: 0.6083
+2024-12-09 02:59:28,719 - INFO - Epoch 15/1000
+2024-12-09 02:59:28,719 - INFO - Training Loss: 0.7589
+2024-12-09 02:59:28,720 - INFO - Validation Loss: 0.6821
+2024-12-09 02:59:28,720 - INFO - Sequence Error Rate: 0.9627
+2024-12-09 02:59:28,720 - INFO - Symbol Error Rate: 0.5941
+2024-12-09 03:01:26,947 - INFO - Epoch 16/1000
+2024-12-09 03:01:26,947 - INFO - Training Loss: 0.7054
+2024-12-09 03:01:26,947 - INFO - Validation Loss: 0.6078
+2024-12-09 03:01:26,947 - INFO - Sequence Error Rate: 0.9613
+2024-12-09 03:01:26,947 - INFO - Symbol Error Rate: 0.5809
+2024-12-09 03:03:25,353 - INFO - Epoch 17/1000
+2024-12-09 03:03:25,353 - INFO - Training Loss: 0.6508
+2024-12-09 03:03:25,353 - INFO - Validation Loss: 0.5770
+2024-12-09 03:03:25,353 - INFO - Sequence Error Rate: 0.9599
+2024-12-09 03:03:25,353 - INFO - Symbol Error Rate: 0.5782
+2024-12-09 03:05:23,547 - INFO - Epoch 18/1000
+2024-12-09 03:05:23,547 - INFO - Training Loss: 0.6060
+2024-12-09 03:05:23,547 - INFO - Validation Loss: 0.5169
+2024-12-09 03:05:23,547 - INFO - Sequence Error Rate: 0.9588
+2024-12-09 03:05:23,547 - INFO - Symbol Error Rate: 0.5663
+2024-12-09 03:07:21,437 - INFO - Epoch 19/1000
+2024-12-09 03:07:21,437 - INFO - Training Loss: 0.5651
+2024-12-09 03:07:21,437 - INFO - Validation Loss: 0.4794
+2024-12-09 03:07:21,437 - INFO - Sequence Error Rate: 0.9578
+2024-12-09 03:07:21,437 - INFO - Symbol Error Rate: 0.5608
+2024-12-09 03:09:19,834 - INFO - Epoch 20/1000
+2024-12-09 03:09:19,834 - INFO - Training Loss: 0.5308
+2024-12-09 03:09:19,834 - INFO - Validation Loss: 0.4670
+2024-12-09 03:09:19,834 - INFO - Sequence Error Rate: 0.9561
+2024-12-09 03:09:19,834 - INFO - Symbol Error Rate: 0.5606
+2024-12-09 03:11:18,430 - INFO - Epoch 21/1000
+2024-12-09 03:11:18,430 - INFO - Training Loss: 0.4976
+2024-12-09 03:11:18,430 - INFO - Validation Loss: 0.4118
+2024-12-09 03:11:18,430 - INFO - Sequence Error Rate: 0.9534
+2024-12-09 03:11:18,430 - INFO - Symbol Error Rate: 0.5492
+2024-12-09 03:13:16,936 - INFO - Epoch 22/1000
+2024-12-09 03:13:16,936 - INFO - Training Loss: 0.4638
+2024-12-09 03:13:16,936 - INFO - Validation Loss: 0.4137
+2024-12-09 03:13:16,936 - INFO - Sequence Error Rate: 0.9515
+2024-12-09 03:13:16,936 - INFO - Symbol Error Rate: 0.5514
+2024-12-09 03:15:14,373 - INFO - Epoch 23/1000
+2024-12-09 03:15:14,374 - INFO - Training Loss: 0.4338
+2024-12-09 03:15:14,374 - INFO - Validation Loss: 0.3549
+2024-12-09 03:15:14,374 - INFO - Sequence Error Rate: 0.9506
+2024-12-09 03:15:14,374 - INFO - Symbol Error Rate: 0.5400
+2024-12-09 03:17:12,624 - INFO - Epoch 24/1000
+2024-12-09 03:17:12,624 - INFO - Training Loss: 0.4073
+2024-12-09 03:17:12,625 - INFO - Validation Loss: 0.3279
+2024-12-09 03:17:12,625 - INFO - Sequence Error Rate: 0.9464
+2024-12-09 03:17:12,625 - INFO - Symbol Error Rate: 0.5358
+2024-12-09 03:19:11,488 - INFO - Epoch 25/1000
+2024-12-09 03:19:11,488 - INFO - Training Loss: 0.3782
+2024-12-09 03:19:11,488 - INFO - Validation Loss: 0.3099
+2024-12-09 03:19:11,489 - INFO - Sequence Error Rate: 0.9457
+2024-12-09 03:19:11,489 - INFO - Symbol Error Rate: 0.5333
+2024-12-09 03:21:09,656 - INFO - Epoch 26/1000
+2024-12-09 03:21:09,656 - INFO - Training Loss: 0.3586
+2024-12-09 03:21:09,656 - INFO - Validation Loss: 0.2974
+2024-12-09 03:21:09,656 - INFO - Sequence Error Rate: 0.9416
+2024-12-09 03:21:09,656 - INFO - Symbol Error Rate: 0.5315
+2024-12-09 03:23:07,454 - INFO - Epoch 27/1000
+2024-12-09 03:23:07,455 - INFO - Training Loss: 0.3386
+2024-12-09 03:23:07,455 - INFO - Validation Loss: 0.2642
+2024-12-09 03:23:07,455 - INFO - Sequence Error Rate: 0.9376
+2024-12-09 03:23:07,455 - INFO - Symbol Error Rate: 0.5262
+2024-12-09 03:25:05,230 - INFO - Epoch 28/1000
+2024-12-09 03:25:05,230 - INFO - Training Loss: 0.3121
+2024-12-09 03:25:05,230 - INFO - Validation Loss: 0.2573
+2024-12-09 03:25:05,230 - INFO - Sequence Error Rate: 0.9351
+2024-12-09 03:25:05,231 - INFO - Symbol Error Rate: 0.5245
+2024-12-09 03:27:04,369 - INFO - Epoch 29/1000
+2024-12-09 03:27:04,369 - INFO - Training Loss: 0.2950
+2024-12-09 03:27:04,369 - INFO - Validation Loss: 0.2365
+2024-12-09 03:27:04,369 - INFO - Sequence Error Rate: 0.9275
+2024-12-09 03:27:04,369 - INFO - Symbol Error Rate: 0.5213
