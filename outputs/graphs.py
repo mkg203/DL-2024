@@ -1,8 +1,8 @@
 #training_log_3_layer_135
 import matplotlib.pyplot as plt
 
-# Replace with your actual data for epochs, training_loss, and validation_loss
-epochs = list(range(1, 135))  # Adjust this based on your available data
+
+epochs = list(range(1, 135))  
 training_loss = [
     4.3945, 3.8029, 3.1791, 2.6941, 2.3037, 1.9765, 1.7119, 1.5221, 1.3715, 1.2493,
     1.1401, 1.0535, 0.9712, 0.9019, 0.8347, 0.7736, 0.7245, 0.6687, 0.6342, 0.5915,
@@ -36,7 +36,7 @@ validation_loss = [
     0.1614, 0.1620, 0.1674
 ]  # List of validation loss values (length 133)
 
-# Adjust the epochs for validation loss if needed
+
 validation_epochs = epochs[:len(validation_loss)]
 
 plt.figure(figsize=(10, 6))
@@ -54,14 +54,12 @@ import re
 import matplotlib.pyplot as plt
 import os
 
-# Option 1: Read log data from a file
-# Replace 'training.log' with the path to your actual log file
+
 log_file_path = r"C:\Users\abhiv\Downloads\training_log_2_257_at.log"
 
 os.path.exists(log_file_path)
 with open(log_file_path, 'r') as file:
     log_data = file.read()
-# Initialize lists to store extracted data
 epochs = []
 training_losses = []
 validation_losses = []
